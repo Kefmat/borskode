@@ -1,0 +1,18 @@
+# Kompilerte Java-filer
+*.class
+
+# Mapper for bygg-artifakter
+bin/
+out/
+build/
+target/
+
+# VS Code spesifikke filer
+.vscode/
+
+# Systemfiler (macOS/Windows)
+.DS_Store
+Thumbs.db
+
+# Loggfiler (hvis vi implementerer logging senere)
+*.log
