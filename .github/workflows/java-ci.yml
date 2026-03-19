@@ -1,0 +1,36 @@
+name: Java CI (Børskode)
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Hent kildekode
+      uses: actions/checkout@v4
+
+    - name: Sett opp JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+
+    - name: Kompiler kildekode
+      run: |
+        mkdir -p bin
+        find src -name "*.java" > sources.txt
+        javac -d bin @sources.txt
+
+    - name: Verifiser bygg
+      run: |
+        if [ -d "bin/models" ] && [ -f "bin/Main.class" ]; then
+          echo "Kompilering fullført og verifisert."
+        else
+          echo "Kompilering feilet: Mangler binære filer."
+          exit 1
+        fi
