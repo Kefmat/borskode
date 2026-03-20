@@ -16,3 +16,6 @@ Thumbs.db
 
 # Loggfiler (hvis vi implementerer logging senere)
 *.log
+
+# Datafiler
+*.csv
