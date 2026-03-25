@@ -3,6 +3,7 @@ package analytics;
 import models.Ticker;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Collections;
 
 /**
  * Hovedmodulen for teknisk analyse i Børskode.
@@ -80,5 +81,14 @@ public class MarketMonitor {
             System.out.printf("[RSI] %s er OVERSOLGT (%.2f). Potensielt kjøpssignal.\n", 
                 ticker.getSymbol(), rsi);
         }
+    }
+
+    /**
+     * Eksponerer historikk-kartet for eksterne komponenter (f.eks. UI/Dashboard).
+     * Returnerer et skrivebeskyttet kart for å bevare dataintegritet.
+     * @return En uforanderlig Map med symboler og tilhørende prishistorikk.
+     */
+    public Map<String, PriceHistoryBuffer> getHistoryMap() {
+        return Collections.unmodifiableMap(historyMap);
     }
 }
