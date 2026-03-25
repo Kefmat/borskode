@@ -2,19 +2,23 @@ import ingestor.MarketDataIngestor;
 import analytics.MarketMonitor;
 import analytics.DataLogger;
 import ui.TerminalDashboard;
+import trading.Portfolio;
 import models.Ticker;
 import java.util.List;
 
 /**
  * Oppstartspunktet for Børskode Engine.
  * Koordinerer flyten mellom datainnhenting, teknisk analyse, 
- * persistent lagring og sanntidsvisning i et terminal-dashboard.
+ * persistent lagring, simulerte handelsordre og sanntidsvisning.
  */
 public class Main {
     public static void main(String[] args) {
         // Initialisering av kjernekomponenter
         MarketDataIngestor ingestor = new MarketDataIngestor();
         MarketMonitor monitor = new MarketMonitor();
+        
+        // Initialiserer porteføljen for Paper Trading med 100 000 NOK
+        Portfolio myPortfolio = new Portfolio(100000.0);
         
         // Oppretter logger for historisk arkivering
         DataLogger logger = new DataLogger("oslo_bors_data.csv");
@@ -29,8 +33,9 @@ public class Main {
                 List<Ticker> updates = ingestor.fetchLatestPrices();
                 
                 for (Ticker ticker : updates) {
-                    // Oppdater interne statistikk-buffere (SMA, Volatilitet, RSI)
-                    monitor.processUpdate(ticker);
+                    // Oppdater interne statistikk-buffere (SMA, Volatilitet, RSI) 
+                    // og utfør simulerte handler basert på signaler.
+                    monitor.processUpdate(ticker, myPortfolio);
                     
                     // Arkiver dataen i CSV-filen
                     logger.logTicker(ticker);
@@ -48,7 +53,7 @@ public class Main {
             System.err.println("\nSystemet ble manuelt avbrutt.");
             Thread.currentThread().interrupt();
         } finally {
-            // Sørgerer for at trådbassenget i ingestoren stenges ned korrekt
+            // Sørger for at trådbassenget i ingestoren stenges ned korrekt
             // slik at JVM-en kan avslutte prosessen helt.
             System.out.println("Frigjør ressurser og avslutter...");
             ingestor.shutdown();
