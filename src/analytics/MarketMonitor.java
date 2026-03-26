@@ -10,10 +10,17 @@ import java.util.Collections;
  * Hovedmodulen for teknisk analyse i Børskode.
  * Overvåker prisendringer og genererer signaler ved brudd på tekniske nivåer,
  * samt varsler om unormal volatilitet basert på statistiske avvik og 
- * momentum-analyser via RSI.
+ * momentum-analyser via RSI. Inkluderer nå Stop-Loss og Take-Profit logikk.
  */
 public class MarketMonitor {
     private final Map<String, PriceHistoryBuffer> historyMap = new HashMap<>();
+    
+    // Holder styr på prisen vi kjøpte aksjen for i simulatoren
+    private final Map<String, Double> entryPrices = new HashMap<>();
+    
+    // Definerer grenser for risikostyring (2% tap eller 5% gevinst)
+    private static final double STOP_LOSS_LIMIT = -2.0;
+    private static final double TAKE_PROFIT_LIMIT = 5.0;
     
     // Definerer vinduet for teknisk analyse (14 iterasjoner er standard for RSI)
     private static final int WINDOW_SIZE = 14;
@@ -48,6 +55,7 @@ public class MarketMonitor {
     /**
      * Analyserer priskryssinger mot SMA, sjekker for statistisk signifikante avvik (volatilitet)
      * og vurderer momentum via RSI. Utfører kjøp/salg i porteføljen ved gitte kriterier.
+     * Inkluderer nå sjekk for Stop-Loss og Take-Profit for å beskytte kapitalen.
      * @param ticker Den gjeldende aksjen.
      * @param sma Det beregnede enkle glidende gjennomsnittet.
      * @param vol Det nåværende standardavviket (volatilitet).
@@ -59,6 +67,31 @@ public class MarketMonitor {
         double diff = currentPrice - sma;
         double diffPercent = (diff / sma) * 100;
         String symbol = ticker.getSymbol();
+
+        // --- RISIKOSTYRING (STOP-LOSS / TAKE-PROFIT) ---
+        // Sjekk om vi eier aksjen for å vurdere exit-strategi
+        if (portfolio.getHoldings().getOrDefault(symbol, 0) > 0 && entryPrices.containsKey(symbol)) {
+            double purchasePrice = entryPrices.get(symbol);
+            double currentReturn = ((currentPrice - purchasePrice) / purchasePrice) * 100;
+
+            // Stop-Loss: Selg hvis tapet overstiger grensen
+            if (currentReturn <= STOP_LOSS_LIMIT) {
+                System.out.printf("[RISK] STOP-LOSS utløst for %s! Tap: %.2f%% (Kurs: %.2f)\n", 
+                                  symbol, currentReturn, currentPrice);
+                portfolio.sell(symbol, currentPrice);
+                entryPrices.remove(symbol);
+                return; // Avslutt sjekk for denne tickeren i denne omgangen
+            }
+
+            // Take-Profit: Selg hvis gevinsten når målet
+            if (currentReturn >= TAKE_PROFIT_LIMIT) {
+                System.out.printf("[RISK] TAKE-PROFIT nådd for %s! Gevinst: %.2f%% (Kurs: %.2f)\n", 
+                                  symbol, currentReturn, currentPrice);
+                portfolio.sell(symbol, currentPrice);
+                entryPrices.remove(symbol);
+                return;
+            }
+        }
 
         // Trend-analyse (SMA Crossover)
         // Margin på 0.1% brukes for å filtrere ut ubetydelig støy.
@@ -86,7 +119,10 @@ public class MarketMonitor {
             System.out.printf("[RSI] %s er OVERKJØPT (%.2f). Potensielt salgssignal.\n", 
                 ticker.getSymbol(), rsi);
             // Strategi: Selg beholdning hvis aksjen er overkjøpt
-            portfolio.sell(symbol, currentPrice);
+            if (portfolio.getHoldings().getOrDefault(symbol, 0) > 0) {
+                portfolio.sell(symbol, currentPrice);
+                entryPrices.remove(symbol);
+            }
         } else if (rsi <= 30) {
             System.out.printf("[RSI] %s er OVERSOLGT (%.2f). Potensielt kjøpssignal.\n", 
                 ticker.getSymbol(), rsi);
@@ -96,6 +132,8 @@ public class MarketMonitor {
                 int quantity = (int) ((portfolio.getCash() * 0.2) / currentPrice);
                 if (quantity > 0) {
                     portfolio.buy(symbol, currentPrice, quantity);
+                    // Lagrer kjøpspris for å kunne beregne stop-loss/take-profit senere
+                    entryPrices.put(symbol, currentPrice);
                 }
             }
         }
