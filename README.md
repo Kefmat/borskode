@@ -1,72 +1,88 @@
-# Borskode
+# Børskode Engine
 
-Borskode er en sanntidsanalysemotor for norske aksjekurser på Oslo Børs (OSE). Løsningen henter markedsdata, beregner tekniske indikatorer og kan sende varsler ved viktige kursbevegelser.
+Børskode Engine er en høyytelses analysemotor og trading-terminal for Oslo Børs, skrevet i Java. Systemet henter markedsdata i parallell, utfører avansert teknisk analyse i sanntid, og kjører en integrert handelssimulator (Paper Trading) med aktiv risikostyring.
 
----
+## Innhold
 
-## Hva Borskode gjør
+- [Funksjoner](#funksjoner)
+- [Systemarkitektur](#systemarkitektur)
+- [Systemoversikt (klasser og ansvar)](#systemoversikt-klasser-og-ansvar)
+- [Demo: Terminal Dashboard](#demo-terminal-dashboard)
+- [Installasjon og bruk](#installasjon-og-bruk)
 
-- Lav-latens datainnhenting via polling og streaming (WebSocket/HTTP)
-- Beregning av tekniske indikatorer: SMA, EMA, RSI, volatilitet
-- Mønsterdeteksjon for hendelser som flash crashes og volumspikes
-- Varsler via Discord, Telegram eller terminal
-- Håndtering av børsens åpningstider og API-rate limits
+## Funksjoner
 
----
+- Parallell Data-Ingestor: Benytter trådbaserte pools for å hente kurser fra flere kilder samtidig med minimal latens.
+- Teknisk analyse-motor:
+  - SMA (Simple Moving Average): Trendidentifisering over 14 perioder.
+  - RSI (Relative Strength Index): Momentum-analyse for å identifisere overkjøpte (>70) eller oversolgte (<30) verdier.
+- 2-Sigma deteksjon: Statistisk analyse av volatilitet for å varsle om unormale prishopp eller fall (flash crashes).
+- Paper Trading Simulator: Fullverdig porteføljestyring med 100 000 NOK startkapital, sporing av kontanter og aksjebeholdning.
+- Aktiv risikostyring:
+  - Stop-loss (-2%)
+  - Take-profit (+5%)
+- Live ANSI-terminal: Fargekodet dashboard som oppdateres in-place uten flimring.
 
-## Arkitekturoversikt (Borskode Pipeline)
+## Systemarkitektur
 
-Borskode er bygget som en reaktiv pipeline for å unngå blokkering i datainnhenting.
+Systemet følger en reaktiv pipeline-arkitektur for å sikre trådsikkerhet og maksimal ytelse under høy belastning.
 
 ```mermaid
 flowchart TD
-  A[OSE Data Provider / Yahoo Finance] -->|HTTPS / WebSocket| B(Borskode Ingestor)
-  B -->|Concurrent Queue| C{Analytics Engine}
-  C -->|Worker 1| D[SMA / EMA Calculator]
-  C -->|Worker 2| E[RSI Calculator]
-  C -->|Worker 3| F[Volatility & Volume Spike Alert]
-  D & E & F --> G[Action Dispatcher]
-  G -->|Alert| H[Discord / Telegram / Terminal]
-  G -->|Store| I[Time-Series DB / Log]
+    A[Oslo Børs API / Data Provider] -->|Parallel HTTP Fetch| B(MarketDataIngestor)
+    B -->|Concurrent Update| C{MarketMonitor}
+
+    subgraph Analysis_Core [Analytics Engine]
+        C --> D[SMA & Trend Analysis]
+        C --> E[RSI & Momentum]
+        C --> F[Volatility / Sigma Detection]
+    end
+
+    subgraph Risk_Management [Risk & Trading]
+        D & E & F --> G{Trade Logic}
+        G -->|Buy/Sell Signals| H[Portfolio Manager]
+        H -->|Risk Check| I[Stop-Loss / Take-Profit]
+    end
+
+    I --> J[ANSI Terminal Dashboard]
+    I --> K[CSV Data Logger]
 ```
 
----
+## Systemoversikt (klasser og ansvar)
 
-## Tekniske utfordringer (og hvordan vi håndterer dem)
+| Modul | Klasse | Ansvar |
+| --- | --- | --- |
+| Ingestor | MarketDataIngestor | Håndterer tråd-pools og asynkron polling av markedsdata. |
+| Analytics | MarketMonitor | Hovedhjerne. Analyserer signaler og trigger handelsordre. |
+| Analytics | PriceHistoryBuffer | Sirkulær buffer som holder på historiske priser for SMA/RSI. |
+| Trading | Portfolio | Holder styr på saldo, beholdning og beregner sanntidsverdi (PnL). |
+| UI | TerminalDashboard | Rendrer det visuelle grensesnittet med ANSI-fargekoding. |
+| Models | Ticker | Datamodell for aksjeinformasjon og prisendringer. |
 
-### 1) Åpningstider på Oslo Børs
-- Oslo Børs er åpen 09:00–16:25 CET på norske handelsdager.
-- Systemet må kunne stoppe datainnhenting når børsen er stengt.
+## Demo: Terminal Dashboard
 
-### 2) Samtidighet og skalering
-- Hver ticker behandles uavhengig for å unngå blokkering og forsinkelse.
-- Løsning: Bruk thread pools / ForkJoinPool sammen med trådsikre datastrukturer (ConcurrentHashMap, BlockingQueue).
+Dashboardet gir en visuell oversikt over marked og portefølje:
 
-### 3) Statistikk og signalering
-- Bruk glidende gjennomsnitt (SMA/EMA) og RSI for å redusere falske signaler.
-- Eksempel:
-  - SMA: gjennomsnittspris over siste N minutter
-  - RSI: måler hastighet og endring i prisbevegelsen
 
----
 
-## Prosjektstruktur (planlagt)
+## Installasjon og bruk
 
-```text
-ingestor/        # Innhenter markedsdata
-models/          # Datastrukturer
-analytics/       # Indikator-motorer og signalgeneratorer
-alerts/          # Varslingskanaler (Discord, e-post, osv.)
-storage/         # Lagring 
-cli/             # Kommando-linje / dashboard-grensesnitt
+### Forutsetninger
+
+- Java Development Kit (JDK) 17 eller nyere.
+
+### Kjøring
+
+1. Klon repoet.
+2. Kompiler alle filer:
+
+```bash
+javac -d bin src/**/*.java Main.java
 ```
 
----
+3. Start programmet:
 
-## Veien videre (roadmap)
-
-- Fase 1: Stabil tilkobling mot datakilder (Yahoo Finance / WebSocket / egen broker API)
-- Fase 2: Effektiv intern buffer (CircularBuffer) for tidserie-data uten å fylle RAM
-- Fase 3: Live-terminal-dashboard for top 10 Oslo Børs-aksjer
-- Fase 4: Backtesting og historiske analyser
+```bash
+java -cp bin Main
+```
 

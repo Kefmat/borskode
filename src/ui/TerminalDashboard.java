@@ -35,7 +35,7 @@ public class TerminalDashboard {
     public void render(List<Ticker> tickers, Map<String, PriceHistoryBuffer> historyMap, Portfolio portfolio) {
         clearScreen();
         System.out.println(CYAN + "================================================================================" + RESET);
-        System.out.println(BOLD + "                BØRSKODE ENGINE - PROFESSIONAL TRADING TERMINAL                " + RESET);
+        System.out.println(BOLD + "                BORSKODE ENGINE - PROFESSIONAL TRADING TERMINAL                " + RESET);
         System.out.println(CYAN + "================================================================================" + RESET);
         System.out.printf(BOLD + "%-10s | %-10s | %-10s | %-10s | %-10s | %-10s\n" + RESET, 
                           "SYMBOL", "PRIS", "ENDRING %", "SMA (14)", "RSI", "STATUS");
