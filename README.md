@@ -63,7 +63,7 @@ flowchart TD
 
 Dashboardet gir en visuell oversikt over marked og portefølje:
 
-
+<img width="580" height="388" alt="image" src="https://github.com/user-attachments/assets/e8ed6c8f-fc14-4f69-b95c-56e19002dcc3" />
 
 ## Installasjon og bruk
 
