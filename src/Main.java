@@ -43,7 +43,8 @@ public class Main {
 
                 // Oppdater det visuelle dashbordet i terminalen
                 // Dette gir en ryddig oversikt over alle aksjer på ett sted.
-                dashboard.render(updates, monitor.getHistoryMap());
+                // Vi sender nå med myPortfolio for å vise beholdning og avkastning.
+                dashboard.render(updates, monitor.getHistoryMap(), myPortfolio);
 
                 // Poll-intervall på 15 sekunder for å balansere mellom 
                 // sanntid og respekt for API-begrensninger (Rate Limiting).
